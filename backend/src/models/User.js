@@ -1,3 +1,4 @@
+// 유저 DB
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
