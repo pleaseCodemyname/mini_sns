@@ -6,6 +6,7 @@ require("dotenv").config();
 const authRoutes = require("./src/routes/auth");
 const postRoutes = require("./src/routes/posts");
 const commentRoutes = require("./src/routes/comments");
+const profileRoutes = require("./src/routes/profile");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -30,6 +31,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes); // 클라이언트가 /api/auth/register이나 /api/auth/login으로 요청을 보내면 해당 라우트 실행됨
 app.use("/api/posts", postRoutes);
 app.use("/api", commentRoutes);
+app.use("/api/profile", profileRoutes);
 
 app.listen(port, () => {
   console.log(`Listening on port ${port}`);

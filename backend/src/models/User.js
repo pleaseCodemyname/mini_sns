@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      trim: true,
       lowercase: true,
     },
     // 유저 비번
@@ -27,6 +28,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       minlength: 6,
+    },
+    // 프로필 이미지
+    profileImage: {
+      type: String,
+      default: null,
     },
     // 유저 자기소개
     intro: {
