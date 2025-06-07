@@ -4,6 +4,7 @@ require("dotenv").config();
 
 // 라우트 import
 const authRoutes = require("./src/routes/auth");
+const postRoutes = require("./src/routes/posts");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -26,6 +27,7 @@ app.get("/", (req, res) => {
 
 // API 라우트 연결
 app.use("/api/auth", authRoutes); // 클라이언트가 /api/auth/register이나 /api/auth/login으로 요청을 보내면 해당 라우트 실행됨
+app.use("/api/posts", postRoutes);
 
 app.listen(port, () => {
   console.log(`Listening on port ${port}`);

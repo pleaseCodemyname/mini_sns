@@ -10,7 +10,7 @@ const postSchema = new mongoose.Schema(
     },
     author: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "User", // User모델 참조 (User의 정보가 모두 담김)
       required: true,
     },
     image: {

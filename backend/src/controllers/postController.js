@@ -44,7 +44,7 @@ exports.getPostById = async (req, res) => {
 exports.createPost = async (req, res) => {
   try {
     const { content, image } = req.body;
-    const userId = req.user.userId; // 인증 미들웨어에서 받아올 예정
+    const userId = req.user.userId;
 
     // 입력값 검증
     if (!content || content.trim() === "") {
