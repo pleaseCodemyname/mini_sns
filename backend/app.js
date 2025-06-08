@@ -8,6 +8,7 @@ const postRoutes = require("./src/routes/posts");
 const commentRoutes = require("./src/routes/comments");
 const profileRoutes = require("./src/routes/profile");
 const followRoutes = require("./src/routes/follow");
+const searchRoutes = require("./src/routes/search");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -34,6 +35,7 @@ app.use("/api/posts", postRoutes);
 app.use("/api", commentRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/users", followRoutes);
+app.use("/api/search", searchRoutes);
 
 app.listen(port, () => {
   console.log(`Listening on port ${port}`);
