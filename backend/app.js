@@ -7,6 +7,7 @@ const authRoutes = require("./src/routes/auth");
 const postRoutes = require("./src/routes/posts");
 const commentRoutes = require("./src/routes/comments");
 const profileRoutes = require("./src/routes/profile");
+const followRoutes = require("./src/routes/follow");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -32,6 +33,7 @@ app.use("/api/auth", authRoutes); // 클라이언트가 /api/auth/register이나
 app.use("/api/posts", postRoutes);
 app.use("/api", commentRoutes);
 app.use("/api/profile", profileRoutes);
+app.use("/api/users", followRoutes);
 
 app.listen(port, () => {
   console.log(`Listening on port ${port}`);
