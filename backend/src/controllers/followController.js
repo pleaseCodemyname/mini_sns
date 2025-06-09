@@ -1,57 +1,55 @@
-const User = require("../models/User");
 const Follow = require("../models/Follow");
+const User = require("../models/User");
+const { createNotification } = require("./notificationController"); // 알림 추가
 
-// 사용자 팔로우
+// 팔로우하기
 exports.followUser = async (req, res) => {
   try {
-    const currentUserId = req.user.userId;
-    const { userId } = req.params;
+    const followerId = req.user.userId; // 팔로우하는 사람
+    const { followingId } = req.params; // 팔로우당하는 사람
 
-    // 자기 자신을 팔로우하려는 경우
-    if (currentUserId === userId) {
+    // 자기 자신을 팔로우하는지 확인
+    if (followerId === followingId) {
       return res
         .status(400)
         .json({ message: "자기 자신을 팔로우할 수 없습니다." });
     }
 
-    // 팔로우할 사용자 존재 확인
-    const userToFollow = await User.findById(userId);
+    // 팔로우할 사용자가 존재하는지 확인
+    const userToFollow = await User.findById(followingId);
     if (!userToFollow) {
-      return res
-        .status(404)
-        .json({ message: "팔로우할 사용자를 찾을 수 없습니다." });
+      return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
     }
 
-    // 이미 팔로우 중인지 확인
+    // 이미 팔로우하고 있는지 확인
     const existingFollow = await Follow.findOne({
-      follower: currentUserId,
-      following: userId,
+      follower: followerId,
+      following: followingId,
     });
 
     if (existingFollow) {
-      return res
-        .status(400)
-        .json({ message: "이미 팔로우 중인 사용자입니다." });
+      return res.status(400).json({ message: "이미 팔로우하고 있습니다." });
     }
 
     // 팔로우 관계 생성
-    const newFollow = new Follow({
-      follower: currentUserId,
-      following: userId,
+    const follow = new Follow({
+      follower: followerId,
+      following: followingId,
     });
 
-    await newFollow.save();
+    await follow.save();
 
-    // 팔로워/팔로잉 수 계산
-    const [followersCount, followingCount] = await Promise.all([
-      Follow.countDocuments({ following: userId }),
-      Follow.countDocuments({ follower: currentUserId }),
-    ]);
+    // 🔔 팔로우 알림 생성
+    await createNotification("follow", followerId, followingId);
 
-    res.json({
-      message: `${userToFollow.username}님을 팔로우했습니다.`,
-      followersCount,
-      followingCount,
+    res.status(201).json({
+      message: "팔로우 성공",
+      follow: {
+        _id: follow._id,
+        follower: followerId,
+        following: followingId,
+        createdAt: follow.createdAt,
+      },
     });
   } catch (error) {
     console.error("팔로우 오류:", error);
@@ -59,53 +57,30 @@ exports.followUser = async (req, res) => {
   }
 };
 
-// 사용자 언팔로우
+// 언팔로우하기
 exports.unfollowUser = async (req, res) => {
   try {
-    const currentUserId = req.user.userId;
-    const { userId } = req.params;
-
-    // 자기 자신을 언팔로우하려는 경우
-    if (currentUserId === userId) {
-      return res
-        .status(400)
-        .json({ message: "자기 자신을 언팔로우할 수 없습니다." });
-    }
-
-    // 언팔로우할 사용자 존재 확인
-    const userToUnfollow = await User.findById(userId);
-    if (!userToUnfollow) {
-      return res
-        .status(404)
-        .json({ message: "언팔로우할 사용자를 찾을 수 없습니다." });
-    }
+    const followerId = req.user.userId;
+    const { followingId } = req.params;
 
     // 팔로우 관계 찾기
-    const followRelation = await Follow.findOne({
-      follower: currentUserId,
-      following: userId,
+    const follow = await Follow.findOne({
+      follower: followerId,
+      following: followingId,
     });
 
-    if (!followRelation) {
-      return res.status(400).json({ message: "팔로우하지 않은 사용자입니다." });
+    if (!follow) {
+      return res
+        .status(404)
+        .json({ message: "팔로우 관계를 찾을 수 없습니다." });
     }
 
     // 팔로우 관계 삭제
-    await Follow.deleteOne({
-      follower: currentUserId,
-      following: userId,
-    });
-
-    // 팔로워/팔로잉 수 계산
-    const [followersCount, followingCount] = await Promise.all([
-      Follow.countDocuments({ following: userId }),
-      Follow.countDocuments({ follower: currentUserId }),
-    ]);
+    await Follow.findByIdAndDelete(follow._id);
 
     res.json({
-      message: `${userToUnfollow.username}님을 언팔로우했습니다.`,
-      followersCount,
-      followingCount,
+      message: "언팔로우 성공",
+      unfollowedUserId: followingId,
     });
   } catch (error) {
     console.error("언팔로우 오류:", error);
@@ -136,12 +111,34 @@ exports.getFollowers = async (req, res) => {
     // 총 팔로워 수
     const totalFollowers = await Follow.countDocuments({ following: userId });
 
+    // 현재 로그인한 사용자가 각 팔로워를 팔로우하고 있는지 확인
+    const currentUserId = req.user?.userId;
+    const followersWithStatus = await Promise.all(
+      followers.map(async (follow) => {
+        let isFollowing = false;
+
+        if (currentUserId && currentUserId !== follow.follower._id.toString()) {
+          const followRelation = await Follow.findOne({
+            follower: currentUserId,
+            following: follow.follower._id,
+          });
+          isFollowing = !!followRelation;
+        }
+
+        return {
+          _id: follow.follower._id,
+          username: follow.follower.username,
+          profileImage: follow.follower.profileImage,
+          intro: follow.follower.intro,
+          isFollowing,
+          followedAt: follow.createdAt,
+        };
+      })
+    );
+
     res.json({
       message: "팔로워 목록 조회 성공",
-      followers: followers.map((follow) => ({
-        user: follow.follower,
-        followedAt: follow.createdAt,
-      })),
+      followers: followersWithStatus,
       totalFollowers,
       currentPage: parseInt(page),
       totalPages: Math.ceil(totalFollowers / limit),
@@ -175,12 +172,18 @@ exports.getFollowing = async (req, res) => {
     // 총 팔로잉 수
     const totalFollowing = await Follow.countDocuments({ follower: userId });
 
+    // 결과 포맷팅
+    const followingList = following.map((follow) => ({
+      _id: follow.following._id,
+      username: follow.following.username,
+      profileImage: follow.following.profileImage,
+      intro: follow.following.intro,
+      followedAt: follow.createdAt,
+    }));
+
     res.json({
       message: "팔로잉 목록 조회 성공",
-      following: following.map((follow) => ({
-        user: follow.following,
-        followedAt: follow.createdAt,
-      })),
+      following: followingList,
       totalFollowing,
       currentPage: parseInt(page),
       totalPages: Math.ceil(totalFollowing / limit),
@@ -192,61 +195,26 @@ exports.getFollowing = async (req, res) => {
 };
 
 // 팔로우 상태 확인
-exports.getFollowStatus = async (req, res) => {
+exports.checkFollowStatus = async (req, res) => {
   try {
-    const currentUserId = req.user.userId;
+    const followerId = req.user.userId;
     const { userId } = req.params;
 
-    if (currentUserId === userId) {
-      return res.json({
-        isFollowing: false,
-        isOwnProfile: true,
-      });
-    }
-
     // 팔로우 관계 확인
-    const followRelation = await Follow.findOne({
-      follower: currentUserId,
+    const follow = await Follow.findOne({
+      follower: followerId,
       following: userId,
     });
 
+    const isFollowing = !!follow;
+
     res.json({
-      isFollowing: !!followRelation,
-      isOwnProfile: false,
-      followedAt: followRelation ? followRelation.createdAt : null,
+      message: "팔로우 상태 조회 성공",
+      isFollowing,
+      followId: follow ? follow._id : null,
     });
   } catch (error) {
     console.error("팔로우 상태 확인 오류:", error);
-    res.status(500).json({ message: "서버 오류", error: error.message });
-  }
-};
-
-// 사용자 통계 조회 (팔로워/팔로잉 수)
-exports.getUserStats = async (req, res) => {
-  try {
-    const { userId } = req.params;
-
-    // 사용자 존재 확인
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
-    }
-
-    // 팔로워/팔로잉 수 계산
-    const [followersCount, followingCount] = await Promise.all([
-      Follow.countDocuments({ following: userId }),
-      Follow.countDocuments({ follower: userId }),
-    ]);
-
-    res.json({
-      message: "사용자 통계 조회 성공",
-      stats: {
-        followersCount,
-        followingCount,
-      },
-    });
-  } catch (error) {
-    console.error("사용자 통계 조회 오류:", error);
     res.status(500).json({ message: "서버 오류", error: error.message });
   }
 };

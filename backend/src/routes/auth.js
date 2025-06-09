@@ -4,13 +4,19 @@
 
 const express = require("express");
 const { register, login } = require("../controllers/authController");
+const auth = require("../middleware/auth");
+const {
+  validateRegister,
+  validateLogin,
+  validateProfile,
+} = require("../middleware/validation");
 
 const router = express.Router();
 
 // 회원가입
-router.post("/register", register);
+router.post("/register", validateRegister, register);
 
 // 로그인
-router.post("/login", login);
+router.post("/login", validateLogin, login);
 
 module.exports = router;

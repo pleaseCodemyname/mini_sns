@@ -2,6 +2,9 @@ const express = require("express");
 const mongoose = require("mongoose");
 require("dotenv").config();
 
+// config import
+const config = require("./src/config/config");
+
 // 라우트 import
 const authRoutes = require("./src/routes/auth");
 const postRoutes = require("./src/routes/posts");
@@ -10,8 +13,11 @@ const profileRoutes = require("./src/routes/profile");
 const followRoutes = require("./src/routes/follow");
 const searchRoutes = require("./src/routes/search");
 const feedRoutes = require("./src/routes/feed");
+const notificationRoutes = require("./src/routes/notification");
+const likeRoutes = require("./src/routes/likes");
+
 const app = express();
-const port = process.env.PORT || 3000;
+const port = config.PORT;
 
 // MongoDB 연결
 mongoose
@@ -37,6 +43,8 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/users", followRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/feed", feedRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/likes", likeRoutes);
 
 app.listen(port, () => {
   console.log(`Listening on port ${port}`);
