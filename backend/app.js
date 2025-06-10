@@ -7,26 +7,26 @@ const compression = require("compression");
 const path = require("path");
 
 // 설정 및 데이터베이스
-const config = require("./config/config");
-const connectDB = require("./config/database");
+const config = require("./src/config/config");
+const connectDB = require("./src/config/database");
 
 // 미들웨어
-const { errorHandler, notFound } = require("./middleware/errorHandler");
+const { errorHandler, notFound } = require("./src/middleware/errorHandler");
 
 // 소켓 관리자
-const socketManager = require("./utils/socket");
+const socketManager = require("./src/utils/socket");
 
 // API 문서화
-const { createMiniSNSAPIDocs } = require("./utils/apiDocs");
+const { createMiniSNSAPIDocs } = require("./src/utils/apiDocs");
 
 // 라우터 (새로운 구조)
-const authRoutes = require("./routes/auth");
-const userRoutes = require("./routes/users"); // profile.js 대체
-const postRoutes = require("./routes/posts"); // 개선됨
-const interactionRoutes = require("./routes/interactions"); // 새로 생성 (likes + comments)
-const socialRoutes = require("./routes/social"); // 새로 생성 (follow + notifications)
-const feedRoutes = require("./routes/feed");
-const searchRoutes = require("./routes/search");
+const authRoutes = require("./src/routes/auth");
+const userRoutes = require("./src/routes/users");
+const postRoutes = require("./src/routes/posts");
+const interactionRoutes = require("./src/routes/interaction");
+const socialRoutes = require("./src/routes/social");
+const feedRoutes = require("./src/routes/feed");
+const searchRoutes = require("./src/routes/search");
 
 const app = express();
 

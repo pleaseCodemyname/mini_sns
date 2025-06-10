@@ -1,0 +1,20 @@
+module.exports = {
+  testEnvironment: "node",
+  setupFilesAfterEnv: ["<rootDir>/tests/setup.js"],
+  testMatch: ["**/tests/**/*.test.js", "**/?(*.)+(spec|test).js"],
+  collectCoverageFrom: [
+    "src/controllers/**/*.js",
+    "src/middleware/**/*.js",
+    "src/utils/**/*.js",
+    "!src/utils/apiDocs.js",
+    "!**/*.test.js",
+  ],
+  coverageDirectory: "coverage",
+  coverageReporters: ["text", "lcov", "html"],
+  verbose: true,
+  detectOpenHandles: true,
+  forceExit: true,
+  clearMocks: true,
+  resetMocks: true,
+  restoreMocks: true,
+};

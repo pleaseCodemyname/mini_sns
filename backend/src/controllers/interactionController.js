@@ -1,7 +1,7 @@
 const Post = require("../models/Post");
 const Like = require("../models/Like");
 const Comment = require("../models/Comment");
-const { createNotification } = require("./notificationController");
+const { createNotification } = require("./socialController");
 
 // ==================== 좋아요 관련 ====================
 
