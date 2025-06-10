@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 module.exports = {
   // JWT 설정
   JWT_SECRET: process.env.JWT_SECRET || "mini_sns_secret_key_2025",
