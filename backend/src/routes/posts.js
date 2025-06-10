@@ -5,30 +5,52 @@ const {
   createPost,
   updatePost,
   deletePost,
-  toggleLike,
+  hardDeletePost,
+  getUserPosts,
 } = require("../controllers/postController");
 
 const auth = require("../middleware/auth");
+const {
+  validatePost,
+  validateObjectId,
+  validatePagination,
+} = require("../middleware/validation");
+
 const router = express.Router();
 
-// 모든 게시물 조회 (로그인 없이도 가능)
-router.get("/", getAllPosts);
+// 모든 게시물 조회 (로그인 선택사항)
+// GET /api/posts?page=1&limit=10
+router.get("/", validatePagination, getAllPosts);
 
-// 특정 게시물 조회 (로그인 없이도 가능)
-router.get("/:id", getPostById);
+// 특정 게시물 조회 (로그인 선택사항)
+// GET /api/posts/:id
+router.get("/:id", validateObjectId("id"), getPostById);
 
-// 인증 미들웨어
+// 사용자별 게시물 조회 (로그인 선택사항)
+// GET /api/posts/user/:userId?page=1&limit=10&includeInactive=false
+router.get(
+  "/user/:userId",
+  validateObjectId("userId"),
+  validatePagination,
+  getUserPosts
+);
+
+// ==================== 인증 필요한 라우트 ====================
 
 // 게시물 작성 (로그인 필요)
-router.post("/", auth, createPost);
+// POST /api/posts
+router.post("/", auth, validatePost, createPost);
 
 // 게시물 수정 (로그인 필요)
-router.put("/:id", auth, updatePost);
+// PUT /api/posts/:id
+router.put("/:id", auth, validateObjectId("id"), validatePost, updatePost);
 
-// 게시물 삭제 (로그인 필요)
-router.delete("/:id", auth, deletePost);
+// 게시물 삭제 - 소프트 삭제 (로그인 필요)
+// DELETE /api/posts/:id
+router.delete("/:id", auth, validateObjectId("id"), deletePost);
 
-// 게시물 좋아요 / 좋아요 취소 (로그인 필요)
-router.post("/:id/like", auth, toggleLike);
+// 게시물 완전 삭제 (로그인 필요)
+// DELETE /api/posts/:id/hard
+router.delete("/:id/hard", auth, validateObjectId("id"), hardDeletePost);
 
 module.exports = router;

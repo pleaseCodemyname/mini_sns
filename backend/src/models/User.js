@@ -1,33 +1,42 @@
 // 유저 DB
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const config = require("../config/config");
 
 // 스키마 생성
 const userSchema = new mongoose.Schema(
   {
-    // 스키마에 들어갈 필드
     // 유저 이름
     username: {
       type: String,
-      required: true,
+      required: [true, "사용자명은 필수입니다."],
       unique: true,
       trim: true,
-      minlength: 3,
-      maxlength: 20,
+      minlength: [3, "사용자명은 3자 이상이어야 합니다."],
+      maxlength: [20, "사용자명은 20자 이하여야 합니다."],
+      match: [
+        /^[a-zA-Z0-9_]+$/,
+        "사용자명은 영문, 숫자, 언더스코어만 사용 가능합니다.",
+      ],
     },
     // 유저 이메일
     email: {
       type: String,
-      required: true,
+      required: [true, "이메일은 필수입니다."],
       unique: true,
       trim: true,
       lowercase: true,
+      match: [
+        /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+        "올바른 이메일 형식이 아닙니다.",
+      ],
     },
     // 유저 비번
     password: {
       type: String,
-      required: true,
-      minlength: 6,
+      required: [true, "비밀번호는 필수입니다."],
+      minlength: [6, "비밀번호는 6자 이상이어야 합니다."],
+      select: false, // 기본적으로 조회시 제외
     },
     // 프로필 이미지
     profileImage: {
@@ -37,8 +46,18 @@ const userSchema = new mongoose.Schema(
     // 유저 자기소개
     intro: {
       type: String,
-      maxlength: 150,
+      maxlength: [200, "자기소개는 200자 이하여야 합니다."],
       default: "",
+    },
+    // 계정 활성화 상태
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    // 마지막 로그인 시간
+    lastLoginAt: {
+      type: Date,
+      default: null,
     },
   },
   {
@@ -48,15 +67,51 @@ const userSchema = new mongoose.Schema(
 );
 
 // 비밀번호 해싱 미들웨어
-/**
- - pre("save"): mongooose의 미들웨어 --> 문서 저장되기 직전 실행(사용자가 회원가입, 비번 변경시 저장하기 전 특정 작업 수행할 수 있도록)
- - if (!this.isModified("password")) return next(); --> 사용자가 비번 변경하지 않았으면 다음 단계로 넘어감
- - this.password = await bcrypt.hash(this.password, 12); --> 사용자가 직접 입력한 비번 bcrypt.has를 이용해 암호화 해싱, 12(해싱강도: saltRounds), 숫자가 클수록 보안 더 강해지지만 느려짐
- */
 userSchema.pre("save", async function (next) {
+  // 비밀번호가 수정되지 않았으면 다음 단계로
   if (!this.isModified("password")) return next();
-  this.password = await bcrypt.hash(this.password, 12);
-  next();
+
+  try {
+    // config에서 정의한 saltRounds 사용
+    this.password = await bcrypt.hash(this.password, config.BCRYPT_SALT_ROUNDS);
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
+
+// 비밀번호 비교 메서드
+userSchema.methods.comparePassword = async function (candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
+
+// 마지막 로그인 시간 업데이트 메서드
+userSchema.methods.updateLastLogin = async function () {
+  this.lastLoginAt = new Date();
+  return this.save();
+};
+
+// 사용자 통계 조회를 위한 정적 메서드
+userSchema.statics.getUserStats = async function (userId) {
+  const Post = require("./Post");
+  const Follow = require("./Follow");
+
+  const [postsCount, followersCount, followingCount] = await Promise.all([
+    Post.countDocuments({ author: userId }),
+    Follow.countDocuments({ following: userId }),
+    Follow.countDocuments({ follower: userId }),
+  ]);
+
+  return {
+    postsCount,
+    followersCount,
+    followingCount,
+  };
+};
+
+// 인덱스 설정
+userSchema.index({ email: 1 });
+userSchema.index({ username: 1 });
+userSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model("User", userSchema);

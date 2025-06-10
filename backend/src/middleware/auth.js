@@ -1,11 +1,12 @@
 // 인증 미들웨어
-const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const { verifyToken, extractTokenFromHeader } = require("../utils/jwt");
 
-const auth = async (req, resizeBy, next) => {
+const auth = async (req, res, next) => {
   try {
     // 헤더에서 토큰 가져오기
-    const token = req.header("Authorization")?.replace("Bearer ", "");
+    const authHeader = req.header("Authorization");
+    const token = extractTokenFromHeader(authHeader);
 
     if (!token) {
       return res.status(401).json({
@@ -13,8 +14,8 @@ const auth = async (req, resizeBy, next) => {
       });
     }
 
-    // 토큰 검증
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // 토큰 검증 (JWT 유틸리티 사용)
+    const decoded = verifyToken(token);
 
     // 사용자 찾기
     const user = await User.findById(decoded.userId).select("-password");
@@ -31,8 +32,12 @@ const auth = async (req, resizeBy, next) => {
   } catch (error) {
     console.error("인증 오류:", error);
 
-    if (error.name === "JsonWebTokenError") {
-      return res.status(401).json({ message: "토큰이 만료되었습니다." });
+    // JWT 유틸리티에서 처리된 에러 메시지 사용
+    if (
+      error.message.includes("토큰이 만료") ||
+      error.message.includes("유효하지 않은 토큰")
+    ) {
+      return res.status(401).json({ message: error.message });
     }
 
     res.status(500).json({
